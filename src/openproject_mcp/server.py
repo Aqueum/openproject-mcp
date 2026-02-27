@@ -41,14 +41,15 @@ async def list_tools() -> list[types.Tool]:
             name="list_work_packages",
             description=(
                 "List work packages with optional filters. Use stale_days to find tasks "
-                "not updated recently. Use assignee_id='me' for current user's tasks."
+                "not updated recently. Use assignee_id='me' for current user's tasks. "
+                "By default OpenProject only returns open work packages; pass status='*' to include all statuses (open and closed)."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "project_id": {"type": "string", "description": "Filter by project ID or identifier"},
                     "assignee_id": {"type": "string", "description": "Filter by assignee user ID or 'me'"},
-                    "status": {"type": "string", "description": "Filter by status name, e.g. 'New', 'In progress'"},
+                    "status": {"type": "string", "description": "Filter by status name, e.g. 'New', 'In progress', 'Closed'. Use '*' to include all statuses (open and closed). By default OpenProject only returns open work packages."},
                     "type_name": {"type": "string", "description": "Filter by type name, e.g. 'Task', 'Bug'"},
                     "stale_days": {"type": "integer", "description": "Only return WPs not updated in N days"},
                 },
