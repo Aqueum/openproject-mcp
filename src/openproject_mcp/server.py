@@ -98,6 +98,7 @@ async def list_tools() -> list[types.Tool]:
                     "percent_done": {"type": "integer", "description": "Completion percentage 0-100"},
                     "estimated_hours": {"type": "number"},
                     "remaining_hours": {"type": "number"},
+                    "start_date": {"type": "string", "description": "Start date YYYY-MM-DD"},
                     "due_date": {"type": "string", "description": "Due date YYYY-MM-DD"},
                 },
                 "required": ["id"],
