@@ -231,3 +231,135 @@ def add_comment(client: OpenProjectClient, work_package_id: int, comment: str) -
         "comment": result.get("comment", {}).get("raw", ""),
         "created_at": result.get("createdAt", ""),
     }
+
+
+# ---------------------------------------------------------------------------
+# Relations
+# ---------------------------------------------------------------------------
+
+RELATION_TYPES = (
+    "relates",
+    "duplicates",
+    "duplicated",
+    "blocks",
+    "blocked",
+    "precedes",
+    "follows",
+    "includes",
+    "partof",
+    "requires",
+    "required",
+)
+
+
+def _format_relation(rel: dict) -> dict:
+    links = rel.get("_links", {})
+    return {
+        "id": rel["id"],
+        "type": rel.get("type", ""),
+        "reverse_type": rel.get("reverseType", ""),
+        "description": rel.get("description", ""),
+        "lag": rel.get("lag", 0),
+        "from_id": _extract_id(links.get("from", {}).get("href", "")),
+        "from_subject": links.get("from", {}).get("title", ""),
+        "to_id": _extract_id(links.get("to", {}).get("href", "")),
+        "to_subject": links.get("to", {}).get("title", ""),
+    }
+
+
+def list_relations(
+    client: OpenProjectClient,
+    from_id: int | None = None,
+    to_id: int | None = None,
+    involved_id: int | None = None,
+    relation_type: str | None = None,
+    sort_by: str | None = None,
+) -> list[dict]:
+    """
+    List relations with optional filters.
+
+    - from_id: filter by the work package from which the relation emanates
+    - to_id: filter by the work package to which the relation points
+    - involved_id: filter by a WP that is either from or to
+    - relation_type: filter by type, e.g. 'blocks', 'precedes', 'relates'
+    - sort_by: JSON sort spec, e.g. '[["type","asc"]]'
+    """
+    import json
+
+    filters = []
+    if from_id is not None:
+        filters.append({"from": {"operator": "=", "values": [str(from_id)]}})
+    if to_id is not None:
+        filters.append({"to": {"operator": "=", "values": [str(to_id)]}})
+    if involved_id is not None:
+        filters.append({"involved": {"operator": "=", "values": [str(involved_id)]}})
+    if relation_type is not None:
+        filters.append({"type": {"operator": "=", "values": [relation_type]}})
+
+    params: dict[str, Any] = {}
+    if filters:
+        params["filters"] = json.dumps(filters)
+    if sort_by:
+        params["sortBy"] = sort_by
+
+    rels = client.get_all("relations", params)
+    return [_format_relation(r) for r in rels]
+
+
+def create_relation(
+    client: OpenProjectClient,
+    from_id: int,
+    to_id: int,
+    relation_type: str,
+    description: str = "",
+    lag: int = 0,
+) -> dict:
+    """
+    Create a relation between two work packages.
+
+    - relation_type: one of relates, duplicates, duplicated, blocks, blocked,
+                     precedes, follows, includes, partof, requires, required
+    - lag: days between the closure of `from` and the start of `to` (precedes/follows)
+    """
+    data: dict[str, Any] = {
+        "type": relation_type,
+        "description": description,
+        "lag": lag,
+        "_links": {
+            "from": {"href": f"/api/v3/work_packages/{from_id}"},
+            "to": {"href": f"/api/v3/work_packages/{to_id}"},
+        },
+    }
+    result = client.post(f"work_packages/{from_id}/relations", data)
+    return _format_relation(result)
+
+
+def update_relation(
+    client: OpenProjectClient,
+    relation_id: int,
+    relation_type: str | None = None,
+    description: str | None = None,
+    lag: int | None = None,
+) -> dict:
+    """
+    Update an existing relation. Only provided fields are changed.
+
+    - relation_type: new type, e.g. 'blocks'
+    - lag: new lag in days
+    """
+    data: dict[str, Any] = {}
+    if relation_type is not None:
+        data["type"] = relation_type
+    if description is not None:
+        data["description"] = description
+    if lag is not None:
+        data["lag"] = lag
+
+    result = client.patch(f"relations/{relation_id}", data)
+    return _format_relation(result)
+
+
+def delete_relation(client: OpenProjectClient, relation_id: int) -> dict:
+    """Delete a relation by its ID."""
+    client.delete(f"relations/{relation_id}")
+    return {"deleted": True, "relation_id": relation_id}
