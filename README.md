@@ -32,12 +32,29 @@ pip install -r requirements.txt
 pip install -e src/
 ```
 
-### 4. Test
+### 4. Verify the server starts
 
 ```bash
 python -m openproject_mcp
 # Should start without errors (waiting for MCP client)
 ```
+
+## Running tests
+
+The test suite uses [`pytest`](https://pytest.org) and [`responses`](https://github.com/getsentry/responses) to mock HTTP calls — no live OpenProject instance is required.
+
+```bash
+# Install dev dependencies (once)
+pip install -e "src/[dev]"
+
+# Run all tests
+pytest
+
+# With coverage report
+pytest --cov=openproject_mcp --cov-report=term-missing
+```
+
+Tests are also run automatically by GitHub Actions on every push and pull request.
 
 ## Claude Desktop Integration
 
