@@ -186,6 +186,7 @@ def update_work_package(
     description: str | None = None,
     status_id: int | None = None,
     assignee_id: int | None = None,
+    parent_id: int | None = None,
     percent_done: int | None = None,
     estimated_hours: float | None = None,
     remaining_hours: float | None = None,
@@ -195,6 +196,7 @@ def update_work_package(
     Update a work package. Only provided fields are changed.
 
     - status_id: get valid IDs from list_statuses()
+    - parent_id: move the WP under a new parent (set to 0 to remove the parent)
     - percent_done: 0-100
     """
     # Must include lockVersion to avoid conflict errors
@@ -209,6 +211,9 @@ def update_work_package(
         data["_links"]["status"] = {"href": f"/api/v3/statuses/{status_id}"}
     if assignee_id is not None:
         data["_links"]["assignee"] = {"href": f"/api/v3/users/{assignee_id}"}
+    if parent_id is not None:
+        href = f"/api/v3/work_packages/{parent_id}" if parent_id != 0 else None
+        data["_links"]["parent"] = {"href": href}
     if percent_done is not None:
         data["percentageDone"] = percent_done
     if estimated_hours is not None:
