@@ -86,22 +86,37 @@ def list_work_packages(
 
 
 def get_work_package(client: OpenProjectClient, id: int) -> dict:
-    """Get full details of a work package including activities (comments)."""
+    """Get full details of a work package including subtasks and comments."""
     wp = client.get(f"work_packages/{id}")
     result = _format_wp(wp)
 
     # Fetch children (subtasks)
-    children_data = client.get(f"work_packages/{id}/children")
-    children = children_data.get("_embedded", {}).get("elements", [])
-    result["children"] = [
-        {"id": c["id"], "subject": c["subject"], "status": c.get("_links", {}).get("status", {}).get("title", "")}
-        for c in children
-    ]
+    try:
+        children_data = client.get(f"work_packages/{id}/children")
+        children = children_data.get("_embedded", {}).get("elements", [])
+        result["children"] = [
+            {"id": c["id"], "subject": c["subject"], "status": c.get("_links", {}).get("status", {}).get("title", "")}
+            for c in children
+        ]
+    except Exception as e:
+        result["children"] = []
+        result["children_error"] = str(e)
 
     # Fetch activities (comments + history)
+    try:
+        result["comments"] = _fetch_comments(client, id)
+    except Exception as e:
+        result["comments"] = []
+        result["comments_error"] = str(e)
+
+    return result
+
+
+def _fetch_comments(client: OpenProjectClient, id: int) -> list[dict]:
+    """Fetch comments (non-empty activities) for a work package."""
     activities_data = client.get(f"work_packages/{id}/activities")
     activities = activities_data.get("_embedded", {}).get("elements", [])
-    result["activities"] = [
+    return [
         {
             "id": a["id"],
             "author": a.get("_links", {}).get("user", {}).get("title", ""),
@@ -112,7 +127,10 @@ def get_work_package(client: OpenProjectClient, id: int) -> dict:
         if a.get("comment", {}).get("raw")
     ]
 
-    return result
+
+def get_comments(client: OpenProjectClient, work_package_id: int) -> list[dict]:
+    """Get all comments on a work package."""
+    return _fetch_comments(client, work_package_id)
 
 
 def create_work_package(

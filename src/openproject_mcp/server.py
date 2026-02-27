@@ -104,6 +104,15 @@ async def list_tools() -> list[types.Tool]:
             },
         ),
         types.Tool(
+            name="get_comments",
+            description="Get all comments on a work package.",
+            inputSchema={
+                "type": "object",
+                "properties": {"work_package_id": {"type": "integer", "description": "Work package ID"}},
+                "required": ["work_package_id"],
+            },
+        ),
+        types.Tool(
             name="add_comment",
             description="Add a markdown comment to a work package.",
             inputSchema={
@@ -160,6 +169,8 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(work_packages.create_work_package(client, **arguments))
             case "update_work_package":
                 return ok(work_packages.update_work_package(client, **arguments))
+            case "get_comments":
+                return ok(work_packages.get_comments(client, arguments["work_package_id"]))
             case "add_comment":
                 return ok(work_packages.add_comment(client, **arguments))
             case "list_users":
