@@ -150,6 +150,71 @@ async def list_tools() -> list[types.Tool]:
             description="List work package priorities (Low, Normal, High, Immediate).",
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
+        types.Tool(
+            name="list_relations",
+            description=(
+                "List relations between work packages with optional filters. "
+                "Use involved_id to get all relations of a given work package."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "from_id": {"type": "integer", "description": "Filter by the work package from which the relation emanates"},
+                    "to_id": {"type": "integer", "description": "Filter by the work package to which the relation points"},
+                    "involved_id": {"type": "integer", "description": "Filter by a WP that is either from or to"},
+                    "relation_type": {
+                        "type": "string",
+                        "description": "Filter by relation type: relates, duplicates, duplicated, blocks, blocked, precedes, follows, includes, partof, requires, required",
+                    },
+                    "sort_by": {"type": "string", "description": 'Sort spec JSON, e.g. \'[["type","asc"]]\''},
+                },
+                "required": [],
+            },
+        ),
+        types.Tool(
+            name="create_relation",
+            description=(
+                "Create a relation between two work packages. "
+                "Supported types: relates, duplicates, duplicated, blocks, blocked, "
+                "precedes, follows, includes, partof, requires, required."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "from_id": {"type": "integer", "description": "ID of the work package from which the relation emanates"},
+                    "to_id": {"type": "integer", "description": "ID of the work package to which the relation points"},
+                    "relation_type": {"type": "string", "description": "Type of relation, e.g. 'blocks', 'precedes', 'relates'"},
+                    "description": {"type": "string", "description": "Optional description of the relation"},
+                    "lag": {"type": "integer", "description": "Days between closure of `from` and start of `to` (for precedes/follows)"},
+                },
+                "required": ["from_id", "to_id", "relation_type"],
+            },
+        ),
+        types.Tool(
+            name="update_relation",
+            description="Update an existing relation (type, description, or lag). Only provided fields are changed.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "relation_id": {"type": "integer", "description": "ID of the relation to update"},
+                    "relation_type": {"type": "string", "description": "New relation type"},
+                    "description": {"type": "string", "description": "New description"},
+                    "lag": {"type": "integer", "description": "New lag in days"},
+                },
+                "required": ["relation_id"],
+            },
+        ),
+        types.Tool(
+            name="delete_relation",
+            description="Delete a relation between work packages by its relation ID.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "relation_id": {"type": "integer", "description": "ID of the relation to delete"},
+                },
+                "required": ["relation_id"],
+            },
+        ),
     ]
 
 
@@ -181,6 +246,14 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(meta.list_types(client, arguments.get("project_id")))
             case "list_priorities":
                 return ok(meta.list_priorities(client))
+            case "list_relations":
+                return ok(work_packages.list_relations(client, **arguments))
+            case "create_relation":
+                return ok(work_packages.create_relation(client, **arguments))
+            case "update_relation":
+                return ok(work_packages.update_relation(client, **arguments))
+            case "delete_relation":
+                return ok(work_packages.delete_relation(client, arguments["relation_id"]))
             case _:
                 return err(ValueError(f"Unknown tool: {name}"))
     except Exception as e:
