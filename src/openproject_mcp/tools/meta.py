@@ -43,3 +43,16 @@ def list_priorities(client: OpenProjectClient) -> list[dict]:
         }
         for p in priorities
     ]
+
+
+def list_categories(client: OpenProjectClient, project_id: str | int) -> list[dict]:
+    """List work package categories for a project."""
+    categories = client.get_all(f"projects/{project_id}/categories")
+    return [
+        {
+            "id": c["id"],
+            "name": c["name"],
+            "default_assignee": c.get("_links", {}).get("defaultAssignee", {}).get("title", ""),
+        }
+        for c in categories
+    ]

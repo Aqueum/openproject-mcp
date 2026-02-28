@@ -76,6 +76,7 @@ async def list_tools() -> list[types.Tool]:
                     "description": {"type": "string", "description": "Markdown description"},
                     "assignee_id": {"type": "integer", "description": "User ID to assign to"},
                     "parent_id": {"type": "integer", "description": "Parent work package ID (for subtasks)"},
+                    "category_id": {"type": "integer", "description": "Category ID (from list_categories)"},
                     "estimated_hours": {"type": "number", "description": "Estimated hours, e.g. 2.5"},
                     "priority_id": {"type": "integer", "description": "Priority ID (from list_priorities)"},
                     "start_date": {"type": "string", "description": "Start date YYYY-MM-DD"},
@@ -95,6 +96,7 @@ async def list_tools() -> list[types.Tool]:
                     "description": {"type": "string", "description": "Markdown description"},
                     "status_id": {"type": "integer", "description": "New status ID (from list_statuses)"},
                     "assignee_id": {"type": "integer", "description": "New assignee user ID"},
+                    "category_id": {"type": "integer", "description": "New category ID (from list_categories)"},
                     "percent_done": {"type": "integer", "description": "Completion percentage 0-100"},
                     "estimated_hours": {"type": "number"},
                     "remaining_hours": {"type": "number"},
@@ -150,6 +152,17 @@ async def list_tools() -> list[types.Tool]:
             description="List work package priorities (Low, Normal, High, Immediate).",
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
+        types.Tool(
+            name="list_categories",
+            description="List work package categories for a project. Use category IDs with create_work_package and update_work_package.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project ID or identifier"},
+                },
+                "required": ["project_id"],
+            },
+        ),
     ]
 
 
@@ -181,6 +194,8 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(meta.list_types(client, arguments.get("project_id")))
             case "list_priorities":
                 return ok(meta.list_priorities(client))
+            case "list_categories":
+                return ok(meta.list_categories(client, arguments["project_id"]))
             case _:
                 return err(ValueError(f"Unknown tool: {name}"))
     except Exception as e:
