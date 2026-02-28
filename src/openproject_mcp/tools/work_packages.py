@@ -20,6 +20,8 @@ def _format_wp(wp: dict) -> dict:
         "author": links.get("author", {}).get("title", ""),
         "project": links.get("project", {}).get("title", ""),
         "parent_id": _extract_id(links.get("parent", {}).get("href", "")),
+        "category_id": _extract_id(links.get("category", {}).get("href", "")),
+        "category": links.get("category", {}).get("title", ""),
         "percent_done": wp.get("percentageDone", 0),
         "estimated_hours": wp.get("estimatedTime"),
         "remaining_hours": wp.get("remainingTime"),
@@ -141,6 +143,7 @@ def create_work_package(
     description: str = "",
     assignee_id: int | None = None,
     parent_id: int | None = None,
+    category_id: int | None = None,
     estimated_hours: float | None = None,
     priority_id: int | None = None,
     start_date: str | None = None,
@@ -150,6 +153,7 @@ def create_work_package(
     Create a new work package (task, subtask, bug, etc.).
 
     - parent_id: set to make this a subtask of another work package
+    - category_id: get valid IDs from list_categories()
     - type_id: get valid IDs from list_types()
     - estimated_hours: e.g. 2.5 for 2h 30m
     """
@@ -166,6 +170,8 @@ def create_work_package(
         data["_links"]["assignee"] = {"href": f"/api/v3/users/{assignee_id}"}
     if parent_id:
         data["_links"]["parent"] = {"href": f"/api/v3/work_packages/{parent_id}"}
+    if category_id:
+        data["_links"]["category"] = {"href": f"/api/v3/categories/{category_id}"}
     if priority_id:
         data["_links"]["priority"] = {"href": f"/api/v3/priorities/{priority_id}"}
     if estimated_hours is not None:
@@ -186,6 +192,7 @@ def update_work_package(
     description: str | None = None,
     status_id: int | None = None,
     assignee_id: int | None = None,
+    category_id: int | None = None,
     percent_done: int | None = None,
     estimated_hours: float | None = None,
     remaining_hours: float | None = None,
@@ -195,6 +202,7 @@ def update_work_package(
     Update a work package. Only provided fields are changed.
 
     - status_id: get valid IDs from list_statuses()
+    - category_id: get valid IDs from list_categories()
     - percent_done: 0-100
     """
     # Must include lockVersion to avoid conflict errors
@@ -209,6 +217,8 @@ def update_work_package(
         data["_links"]["status"] = {"href": f"/api/v3/statuses/{status_id}"}
     if assignee_id is not None:
         data["_links"]["assignee"] = {"href": f"/api/v3/users/{assignee_id}"}
+    if category_id is not None:
+        data["_links"]["category"] = {"href": f"/api/v3/categories/{category_id}"}
     if percent_done is not None:
         data["percentageDone"] = percent_done
     if estimated_hours is not None:
