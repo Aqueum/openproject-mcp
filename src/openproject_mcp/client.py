@@ -49,6 +49,13 @@ class OpenProjectClient:
         response.raise_for_status()
         return response.json()
 
+    def get_raw(self, path: str) -> requests.Response:
+        """GET a non-JSON endpoint (e.g. attachment content), following redirects."""
+        url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
+        response = self.session.get(url, headers={"Accept": "*/*"})
+        response.raise_for_status()
+        return response
+
     def get_all(self, path: str, params: dict | None = None) -> list[dict]:
         """Fetch all pages of a collection endpoint."""
         params = params or {}

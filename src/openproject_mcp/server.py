@@ -168,6 +168,19 @@ async def list_tools() -> list[types.Tool]:
                 "required": ["work_package_id"],
             },
         ),
+        types.Tool(
+            name="get_attachment_content",
+            description=(
+                "Fetch the content of an attachment by its ID. "
+                "Returns decoded text for text-based files (plain, markdown, JSON, HTML, CSV). "
+                "Returns a binary notice with filename and size for images, PDFs, and other binary formats."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"attachment_id": {"type": "integer", "description": "Attachment ID"}},
+                "required": ["attachment_id"],
+            },
+        ),
     ]
 
 
@@ -203,6 +216,8 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(work_packages.get_work_package_relations(client, arguments["work_package_id"]))
             case "get_work_package_attachments":
                 return ok(work_packages.get_work_package_attachments(client, arguments["work_package_id"]))
+            case "get_attachment_content":
+                return ok(work_packages.get_attachment_content(client, arguments["attachment_id"]))
             case _:
                 return err(ValueError(f"Unknown tool: {name}"))
     except Exception as e:

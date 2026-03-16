@@ -255,6 +255,47 @@ def get_work_package_relations(client: OpenProjectClient, work_package_id: int) 
     return result
 
 
+_TEXT_CONTENT_TYPES = {
+    "text/plain",
+    "text/markdown",
+    "application/json",
+    "text/html",
+    "text/csv",
+}
+
+
+def get_attachment_content(client: OpenProjectClient, attachment_id: int) -> dict:
+    """
+    Fetch the content of an attachment.
+
+    Returns the decoded text for text-based files, or a message indicating
+    the file is binary along with its filename and size.
+    """
+    # First fetch metadata to get filename and size
+    meta = client.get(f"attachments/{attachment_id}")
+    file_name = meta.get("fileName", "")
+    file_size = meta.get("fileSize")
+
+    response = client.get_raw(f"attachments/{attachment_id}/content")
+    content_type = response.headers.get("Content-Type", "").split(";")[0].strip()
+
+    if content_type in _TEXT_CONTENT_TYPES:
+        return {
+            "attachment_id": attachment_id,
+            "file_name": file_name,
+            "content_type": content_type,
+            "content": response.text,
+        }
+
+    return {
+        "attachment_id": attachment_id,
+        "file_name": file_name,
+        "file_size": file_size,
+        "content_type": content_type,
+        "content": f"Binary file ({content_type}) — not readable as text.",
+    }
+
+
 def get_work_package_attachments(client: OpenProjectClient, work_package_id: int) -> list[dict]:
     """Get all attachments for a work package."""
     data = client.get(f"work_packages/{work_package_id}/attachments")
