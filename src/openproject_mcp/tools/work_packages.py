@@ -231,3 +231,44 @@ def add_comment(client: OpenProjectClient, work_package_id: int, comment: str) -
         "comment": result.get("comment", {}).get("raw", ""),
         "created_at": result.get("createdAt", ""),
     }
+
+
+def get_work_package_relations(client: OpenProjectClient, work_package_id: int) -> list[dict]:
+    """Get all relations for a work package (blocks, follows, relates, etc.)."""
+    data = client.get(f"work_packages/{work_package_id}/relations")
+    relations = data.get("_embedded", {}).get("elements", [])
+    result = []
+    for rel in relations:
+        links = rel.get("_links", {})
+        from_wp = links.get("from", {})
+        to_wp = links.get("to", {})
+        result.append({
+            "id": rel.get("id"),
+            "type": rel.get("type", ""),
+            "description": rel.get("description", ""),
+            "delay": rel.get("delay"),
+            "from_id": _extract_id(from_wp.get("href", "")),
+            "from_subject": from_wp.get("title", ""),
+            "to_id": _extract_id(to_wp.get("href", "")),
+            "to_subject": to_wp.get("title", ""),
+        })
+    return result
+
+
+def get_work_package_attachments(client: OpenProjectClient, work_package_id: int) -> list[dict]:
+    """Get all attachments for a work package."""
+    data = client.get(f"work_packages/{work_package_id}/attachments")
+    attachments = data.get("_embedded", {}).get("elements", [])
+    result = []
+    for att in attachments:
+        links = att.get("_links", {})
+        result.append({
+            "id": att.get("id"),
+            "file_name": att.get("fileName", ""),
+            "file_size": att.get("fileSize"),
+            "content_type": att.get("contentType", ""),
+            "created_at": att.get("createdAt", ""),
+            "author": links.get("author", {}).get("title", ""),
+            "download_url": links.get("downloadLocation", {}).get("href", ""),
+        })
+    return result

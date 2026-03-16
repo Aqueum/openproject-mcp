@@ -150,6 +150,24 @@ async def list_tools() -> list[types.Tool]:
             description="List work package priorities (Low, Normal, High, Immediate).",
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
+        types.Tool(
+            name="get_work_package_relations",
+            description="Get all relations for a work package (blocks, follows, relates, duplicates, etc.).",
+            inputSchema={
+                "type": "object",
+                "properties": {"work_package_id": {"type": "integer", "description": "Work package ID"}},
+                "required": ["work_package_id"],
+            },
+        ),
+        types.Tool(
+            name="get_work_package_attachments",
+            description="Get all attachments for a work package (filename, download URL, file size, created_at).",
+            inputSchema={
+                "type": "object",
+                "properties": {"work_package_id": {"type": "integer", "description": "Work package ID"}},
+                "required": ["work_package_id"],
+            },
+        ),
     ]
 
 
@@ -181,6 +199,10 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(meta.list_types(client, arguments.get("project_id")))
             case "list_priorities":
                 return ok(meta.list_priorities(client))
+            case "get_work_package_relations":
+                return ok(work_packages.get_work_package_relations(client, arguments["work_package_id"]))
+            case "get_work_package_attachments":
+                return ok(work_packages.get_work_package_attachments(client, arguments["work_package_id"]))
             case _:
                 return err(ValueError(f"Unknown tool: {name}"))
     except Exception as e:
