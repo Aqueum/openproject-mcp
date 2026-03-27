@@ -95,6 +95,7 @@ async def list_tools() -> list[types.Tool]:
                     "description": {"type": "string", "description": "Markdown description"},
                     "status_id": {"type": "integer", "description": "New status ID (from list_statuses)"},
                     "assignee_id": {"type": "integer", "description": "New assignee user ID"},
+                    "parent_id": {"type": "integer", "description": "New parent work package ID (use 0 to remove parent)"},
                     "percent_done": {"type": "integer", "description": "Completion percentage 0-100"},
                     "estimated_hours": {"type": "number"},
                     "remaining_hours": {"type": "number"},
