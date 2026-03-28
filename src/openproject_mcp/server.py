@@ -6,7 +6,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
 from openproject_mcp.client import OpenProjectClient
-from openproject_mcp.tools import projects, work_packages, users, meta
+from openproject_mcp.tools import projects, work_packages, users, meta, time_entries
 
 server = Server("openproject")
 client = OpenProjectClient()
@@ -181,6 +181,38 @@ async def list_tools() -> list[types.Tool]:
                 "required": ["attachment_id"],
             },
         ),
+        types.Tool(
+            name="list_activities",
+            description="List all time entry activity types (id, name, href). Use activity_id when creating time entries.",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        types.Tool(
+            name="create_time_entry",
+            description="Log time against a work package. Use list_activities to get a valid activity_id.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_package_id": {"type": "integer", "description": "Work package ID"},
+                    "hours": {"type": "number", "description": "Decimal hours, e.g. 1.5 for 1h 30m"},
+                    "spent_on": {"type": "string", "description": "Date YYYY-MM-DD"},
+                    "activity_id": {"type": "integer", "description": "Activity ID from list_activities"},
+                    "comment": {"type": "string", "description": "Optional comment"},
+                },
+                "required": ["work_package_id", "hours", "spent_on", "activity_id"],
+            },
+        ),
+        types.Tool(
+            name="list_time_entries",
+            description="List time entries, optionally filtered by work package.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_package_id": {"type": "integer", "description": "Filter by work package ID"},
+                    "limit": {"type": "integer", "description": "Maximum entries to return (default 25)"},
+                },
+                "required": [],
+            },
+        ),
     ]
 
 
@@ -218,6 +250,12 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(work_packages.get_work_package_attachments(client, arguments["work_package_id"]))
             case "get_attachment_content":
                 return ok(work_packages.get_attachment_content(client, arguments["attachment_id"]))
+            case "list_activities":
+                return ok(time_entries.list_activities(client))
+            case "create_time_entry":
+                return ok(time_entries.create_time_entry(client, **arguments))
+            case "list_time_entries":
+                return ok(time_entries.list_time_entries(client, **arguments))
             case _:
                 return err(ValueError(f"Unknown tool: {name}"))
     except Exception as e:
