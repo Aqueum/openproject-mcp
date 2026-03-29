@@ -117,6 +117,15 @@ class TestCreateTimeEntry:
         assert body["_links"]["workPackage"]["href"] == "/api/v3/work_packages/7"
         assert body["_links"]["activity"]["href"] == "/api/v3/time_entries/activities/1"
 
+    def test_activity_link_omitted_when_activity_id_not_provided(self):
+        client = MagicMock()
+        client.post.return_value = self._make_post_response()
+
+        create_time_entry(client, work_package_id=7, hours=1.0, spent_on="2026-03-28")
+
+        body = client.post.call_args[0][1]
+        assert "activity" not in body["_links"]
+
     def test_comment_is_included_when_provided(self):
         client = MagicMock()
         client.post.return_value = self._make_post_response()

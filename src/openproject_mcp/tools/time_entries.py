@@ -35,7 +35,7 @@ def create_time_entry(
     work_package_id: int,
     hours: float,
     spent_on: str,
-    activity_id: int,
+    activity_id: int | None = None,
     comment: str = "",
     user_id: int | None = None,
 ) -> dict:
@@ -51,9 +51,10 @@ def create_time_entry(
         "spentOn": spent_on,
         "_links": {
             "workPackage": {"href": f"/api/v3/work_packages/{work_package_id}"},
-            "activity": {"href": f"/api/v3/time_entries/activities/{activity_id}"},
         },
     }
+    if activity_id is not None:
+        data["_links"]["activity"] = {"href": f"/api/v3/time_entries/activities/{activity_id}"}
     if comment:
         data["comment"] = {"format": "plain", "raw": comment}
     if user_id is not None:
