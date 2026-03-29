@@ -226,17 +226,42 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             case "get_project":
                 return ok(projects.get_project(client, arguments["id"]))
             case "list_work_packages":
-                return ok(work_packages.list_work_packages(client, **arguments))
+                args = dict(arguments)
+                if "stale_days" in args:
+                    args["stale_days"] = int(args["stale_days"])
+                return ok(work_packages.list_work_packages(client, **args))
             case "get_work_package":
-                return ok(work_packages.get_work_package(client, arguments["id"]))
+                return ok(work_packages.get_work_package(client, int(arguments["id"])))
             case "create_work_package":
-                return ok(work_packages.create_work_package(client, **arguments))
+                args = dict(arguments)
+                args["type_id"] = int(args["type_id"])
+                if "assignee_id" in args:
+                    args["assignee_id"] = int(args["assignee_id"])
+                if "parent_id" in args:
+                    args["parent_id"] = int(args["parent_id"])
+                if "estimated_hours" in args:
+                    args["estimated_hours"] = float(args["estimated_hours"])
+                if "priority_id" in args:
+                    args["priority_id"] = int(args["priority_id"])
+                return ok(work_packages.create_work_package(client, **args))
             case "update_work_package":
-                return ok(work_packages.update_work_package(client, **arguments))
+                args = dict(arguments)
+                args["id"] = int(args["id"])
+                if "status_id" in args:
+                    args["status_id"] = int(args["status_id"])
+                if "assignee_id" in args:
+                    args["assignee_id"] = int(args["assignee_id"])
+                if "percent_done" in args:
+                    args["percent_done"] = int(args["percent_done"])
+                if "estimated_hours" in args:
+                    args["estimated_hours"] = float(args["estimated_hours"])
+                if "remaining_hours" in args:
+                    args["remaining_hours"] = float(args["remaining_hours"])
+                return ok(work_packages.update_work_package(client, **args))
             case "get_comments":
-                return ok(work_packages.get_comments(client, arguments["work_package_id"]))
+                return ok(work_packages.get_comments(client, int(arguments["work_package_id"])))
             case "add_comment":
-                return ok(work_packages.add_comment(client, **arguments))
+                return ok(work_packages.add_comment(client, int(arguments["work_package_id"]), arguments["comment"]))
             case "list_users":
                 return ok(users.list_users(client))
             case "list_statuses":
@@ -246,17 +271,29 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             case "list_priorities":
                 return ok(meta.list_priorities(client))
             case "get_work_package_relations":
-                return ok(work_packages.get_work_package_relations(client, arguments["work_package_id"]))
+                return ok(work_packages.get_work_package_relations(client, int(arguments["work_package_id"])))
             case "get_work_package_attachments":
-                return ok(work_packages.get_work_package_attachments(client, arguments["work_package_id"]))
+                return ok(work_packages.get_work_package_attachments(client, int(arguments["work_package_id"])))
             case "get_attachment_content":
-                return ok(work_packages.get_attachment_content(client, arguments["attachment_id"]))
+                return ok(work_packages.get_attachment_content(client, int(arguments["attachment_id"])))
             case "list_activities":
                 return ok(time_entries.list_activities(client))
             case "create_time_entry":
-                return ok(time_entries.create_time_entry(client, **arguments))
+                return ok(time_entries.create_time_entry(
+                    client,
+                    work_package_id=int(arguments["work_package_id"]),
+                    hours=float(arguments["hours"]),
+                    spent_on=arguments["spent_on"],
+                    activity_id=int(arguments["activity_id"]) if arguments.get("activity_id") is not None else None,
+                    comment=arguments.get("comment", ""),
+                    user_id=int(arguments["user_id"]) if arguments.get("user_id") is not None else None,
+                ))
             case "list_time_entries":
-                return ok(time_entries.list_time_entries(client, **arguments))
+                return ok(time_entries.list_time_entries(
+                    client,
+                    work_package_id=int(arguments["work_package_id"]) if arguments.get("work_package_id") is not None else None,
+                    limit=int(arguments.get("limit", 25)),
+                ))
             case _:
                 return err(ValueError(f"Unknown tool: {name}"))
     except Exception as e:
