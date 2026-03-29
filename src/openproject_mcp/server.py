@@ -192,12 +192,12 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "work_package_id": {"type": "integer", "description": "Work package ID"},
-                    "hours": {"type": "number", "description": "Decimal hours, e.g. 1.5 for 1h 30m"},
+                    "work_package_id": {"type": "string", "description": "Work package ID"},
+                    "hours": {"type": "string", "description": "Decimal hours, e.g. 1.5 for 1h 30m"},
                     "spent_on": {"type": "string", "description": "Date YYYY-MM-DD"},
-                    "activity_id": {"type": "integer", "description": "Activity ID from list_activities"},
+                    "activity_id": {"type": "string", "description": "Activity ID from list_activities"},
                     "comment": {"type": "string", "description": "Optional comment"},
-                    "user_id": {"type": "integer", "description": "User ID to log time on behalf of"},
+                    "user_id": {"type": "string", "description": "User ID to log time on behalf of"},
                 },
                 "required": ["work_package_id", "hours", "spent_on"],
             },
@@ -208,8 +208,8 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "work_package_id": {"type": "integer", "description": "Filter by work package ID"},
-                    "limit": {"type": "integer", "description": "Maximum entries to return (default 25)"},
+                    "work_package_id": {"type": "string", "description": "Filter by work package ID"},
+                    "limit": {"type": "string", "description": "Maximum entries to return (default 25)"},
                 },
                 "required": [],
             },

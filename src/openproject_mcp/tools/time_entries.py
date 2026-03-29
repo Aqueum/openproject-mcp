@@ -46,6 +46,11 @@ def create_time_entry(
     - spent_on: date string YYYY-MM-DD
     - activity_id: get valid IDs from list_activities()
     """
+    work_package_id = int(work_package_id)
+    hours = float(hours)
+    activity_id = int(activity_id) if activity_id is not None else None
+    user_id = int(user_id) if user_id is not None else None
+
     data: dict[str, Any] = {
         "hours": _hours_to_iso8601(hours),
         "spentOn": spent_on,
@@ -81,6 +86,9 @@ def list_time_entries(
     - work_package_id: filter to a specific work package
     - limit: maximum entries to return (default 25)
     """
+    work_package_id = int(work_package_id) if work_package_id is not None else None
+    limit = int(limit)
+
     params: dict[str, Any] = {"pageSize": limit}
 
     if work_package_id is not None:
