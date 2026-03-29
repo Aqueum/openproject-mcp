@@ -135,6 +135,15 @@ class TestCreateTimeEntry:
         body = client.post.call_args[0][1]
         assert "comment" not in body
 
+    def test_user_link_included_when_user_id_provided(self):
+        client = MagicMock()
+        client.post.return_value = self._make_post_response()
+
+        create_time_entry(client, work_package_id=7, hours=1.0, spent_on="2026-03-28", activity_id=1, user_id=42)
+
+        body = client.post.call_args[0][1]
+        assert body["_links"]["user"] == {"href": "/api/v3/users/42"}
+
 
 # ---------------------------------------------------------------------------
 # list_time_entries

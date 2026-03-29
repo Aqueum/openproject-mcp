@@ -197,6 +197,7 @@ async def list_tools() -> list[types.Tool]:
                     "spent_on": {"type": "string", "description": "Date YYYY-MM-DD"},
                     "activity_id": {"type": "integer", "description": "Activity ID from list_activities"},
                     "comment": {"type": "string", "description": "Optional comment"},
+                    "user_id": {"type": "integer", "description": "User ID to log time on behalf of"},
                 },
                 "required": ["work_package_id", "hours", "spent_on", "activity_id"],
             },

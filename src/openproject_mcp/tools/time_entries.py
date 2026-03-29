@@ -37,6 +37,7 @@ def create_time_entry(
     spent_on: str,
     activity_id: int,
     comment: str = "",
+    user_id: int | None = None,
 ) -> dict:
     """
     Create a time entry for a work package.
@@ -55,6 +56,8 @@ def create_time_entry(
     }
     if comment:
         data["comment"] = {"format": "plain", "raw": comment}
+    if user_id is not None:
+        data["_links"]["user"] = {"href": f"/api/v3/users/{user_id}"}
 
     result = client.post("time_entries", data)
     links = result.get("_links", {})
