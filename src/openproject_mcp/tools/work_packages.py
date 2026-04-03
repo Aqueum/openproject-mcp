@@ -65,7 +65,10 @@ def list_work_packages(
         filters.append({"assignee": {"operator": "=", "values": [str(assignee_id)]}})
 
     if status:
-        filters.append({"status": {"operator": "=", "values": [status]}})
+        if status == "*":
+            filters.append({"status": {"operator": "*", "values": []}})
+        else:
+            filters.append({"status": {"operator": "=", "values": [status]}})
 
     if type_name:
         filters.append({"type": {"operator": "=", "values": [type_name]}})
