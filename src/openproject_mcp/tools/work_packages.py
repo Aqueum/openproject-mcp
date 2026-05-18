@@ -217,9 +217,9 @@ def update_work_package(
     if remaining_hours is not None:
         data["remainingTime"] = f"PT{int(remaining_hours)}H{int((remaining_hours % 1) * 60)}M"
     if start_date is not None:
-        data["startDate"] = start_date
+        data["startDate"] = start_date or None
     if due_date is not None:
-        data["dueDate"] = due_date
+        data["dueDate"] = due_date or None
 
     wp = client.patch(f"work_packages/{id}", data)
     return _format_wp(wp)
