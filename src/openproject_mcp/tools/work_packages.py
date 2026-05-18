@@ -189,6 +189,7 @@ def update_work_package(
     percent_done: int | None = None,
     estimated_hours: float | None = None,
     remaining_hours: float | None = None,
+    start_date: str | None = None,
     due_date: str | None = None,
 ) -> dict:
     """
@@ -215,6 +216,8 @@ def update_work_package(
         data["estimatedTime"] = f"PT{int(estimated_hours)}H{int((estimated_hours % 1) * 60)}M"
     if remaining_hours is not None:
         data["remainingTime"] = f"PT{int(remaining_hours)}H{int((remaining_hours % 1) * 60)}M"
+    if start_date is not None:
+        data["startDate"] = start_date
     if due_date is not None:
         data["dueDate"] = due_date
 
