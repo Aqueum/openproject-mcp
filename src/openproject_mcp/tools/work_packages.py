@@ -186,6 +186,7 @@ def update_work_package(
     description: str | None = None,
     status_id: int | None = None,
     assignee_id: int | None = None,
+    priority_id: int | None = None,
     percent_done: int | None = None,
     estimated_hours: float | None = None,
     remaining_hours: float | None = None,
@@ -196,6 +197,7 @@ def update_work_package(
     Update a work package. Only provided fields are changed.
 
     - status_id: get valid IDs from list_statuses()
+    - priority_id: get valid IDs from list_priorities()
     - percent_done: 0-100
     """
     # Must include lockVersion to avoid conflict errors
@@ -210,6 +212,8 @@ def update_work_package(
         data["_links"]["status"] = {"href": f"/api/v3/statuses/{status_id}"}
     if assignee_id is not None:
         data["_links"]["assignee"] = {"href": f"/api/v3/users/{assignee_id}"}
+    if priority_id is not None:
+        data["_links"]["priority"] = {"href": f"/api/v3/priorities/{priority_id}"}
     if percent_done is not None:
         data["percentageDone"] = percent_done
     if estimated_hours is not None:
@@ -236,26 +240,74 @@ def add_comment(client: OpenProjectClient, work_package_id: int, comment: str) -
     }
 
 
+def _format_relation(rel: dict) -> dict:
+    links = rel.get("_links", {})
+    from_wp = links.get("from", {})
+    to_wp = links.get("to", {})
+    return {
+        "id": rel.get("id"),
+        "type": rel.get("type", ""),
+        "description": rel.get("description", ""),
+        "delay": rel.get("delay"),
+        "from_id": _extract_id(from_wp.get("href", "")),
+        "from_subject": from_wp.get("title", ""),
+        "to_id": _extract_id(to_wp.get("href", "")),
+        "to_subject": to_wp.get("title", ""),
+    }
+
+
 def get_work_package_relations(client: OpenProjectClient, work_package_id: int) -> list[dict]:
     """Get all relations for a work package (blocks, follows, relates, etc.)."""
     data = client.get(f"work_packages/{work_package_id}/relations")
     relations = data.get("_embedded", {}).get("elements", [])
-    result = []
-    for rel in relations:
-        links = rel.get("_links", {})
-        from_wp = links.get("from", {})
-        to_wp = links.get("to", {})
-        result.append({
-            "id": rel.get("id"),
-            "type": rel.get("type", ""),
-            "description": rel.get("description", ""),
-            "delay": rel.get("delay"),
-            "from_id": _extract_id(from_wp.get("href", "")),
-            "from_subject": from_wp.get("title", ""),
-            "to_id": _extract_id(to_wp.get("href", "")),
-            "to_subject": to_wp.get("title", ""),
-        })
-    return result
+    return [_format_relation(rel) for rel in relations]
+
+
+def create_relation(
+    client: OpenProjectClient,
+    from_work_package_id: int,
+    to_work_package_id: int,
+    relation_type: str,
+) -> dict:
+    """
+    Create a relation between two work packages.
+
+    - relation_type: one of relates, duplicates, duplicated, blocks, blocked,
+      precedes, follows, includes, partof, requires, required
+    """
+    data = {
+        "type": relation_type,
+        "_links": {"to": {"href": f"/api/v3/work_packages/{to_work_package_id}"}},
+    }
+    rel = client.post(f"work_packages/{from_work_package_id}/relations", data)
+    return _format_relation(rel)
+
+
+def update_relation(
+    client: OpenProjectClient,
+    relation_id: int,
+    description: str | None = None,
+    relation_type: str | None = None,
+) -> dict:
+    """
+    Update a relation. Only provided fields are changed.
+
+    - relation_type: see create_relation for the valid values
+    """
+    current = client.get(f"relations/{relation_id}")
+    data: dict[str, Any] = {"lockVersion": current["lockVersion"]}
+    if description is not None:
+        data["description"] = description
+    if relation_type is not None:
+        data["type"] = relation_type
+    rel = client.patch(f"relations/{relation_id}", data)
+    return _format_relation(rel)
+
+
+def delete_relation(client: OpenProjectClient, relation_id: int) -> dict:
+    """Delete a relation by ID."""
+    client.delete(f"relations/{relation_id}")
+    return {"deleted": True, "relation_id": relation_id}
 
 
 _TEXT_CONTENT_TYPES = {

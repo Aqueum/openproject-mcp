@@ -95,6 +95,7 @@ async def list_tools() -> list[types.Tool]:
                     "description": {"type": "string", "description": "Markdown description"},
                     "status_id": {"type": "integer", "description": "New status ID (from list_statuses)"},
                     "assignee_id": {"type": "integer", "description": "New assignee user ID"},
+                    "priority_id": {"type": "integer", "description": "New priority ID (from list_priorities)"},
                     "percent_done": {"type": "integer", "description": "Completion percentage 0-100"},
                     "estimated_hours": {"type": "number"},
                     "remaining_hours": {"type": "number"},
@@ -158,6 +159,49 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {"work_package_id": {"type": "integer", "description": "Work package ID"}},
                 "required": ["work_package_id"],
+            },
+        ),
+        types.Tool(
+            name="create_relation",
+            description=(
+                "Create a relation from one work package to another. "
+                "relation_type is one of: relates, duplicates, duplicated, "
+                "blocks, blocked, precedes, follows, includes, partof, "
+                "requires, required."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "from_work_package_id": {"type": "integer", "description": "Source work package ID"},
+                    "to_work_package_id": {"type": "integer", "description": "Target work package ID"},
+                    "relation_type": {"type": "string", "description": "Relation type name"},
+                },
+                "required": ["from_work_package_id", "to_work_package_id", "relation_type"],
+            },
+        ),
+        types.Tool(
+            name="update_relation",
+            description=(
+                "Update a relation by ID. Provide description and/or "
+                "relation_type — only provided fields are changed."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "relation_id": {"type": "integer", "description": "Relation ID"},
+                    "description": {"type": "string", "description": "New description"},
+                    "relation_type": {"type": "string", "description": "New relation type (see create_relation)"},
+                },
+                "required": ["relation_id"],
+            },
+        ),
+        types.Tool(
+            name="delete_relation",
+            description="Delete a work package relation by ID.",
+            inputSchema={
+                "type": "object",
+                "properties": {"relation_id": {"type": "integer", "description": "Relation ID"}},
+                "required": ["relation_id"],
             },
         ),
         types.Tool(
@@ -252,6 +296,8 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                     args["status_id"] = int(args["status_id"])
                 if "assignee_id" in args:
                     args["assignee_id"] = int(args["assignee_id"])
+                if "priority_id" in args:
+                    args["priority_id"] = int(args["priority_id"])
                 if "percent_done" in args:
                     args["percent_done"] = int(args["percent_done"])
                 if "estimated_hours" in args:
@@ -273,6 +319,22 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 return ok(meta.list_priorities(client))
             case "get_work_package_relations":
                 return ok(work_packages.get_work_package_relations(client, int(arguments["work_package_id"])))
+            case "create_relation":
+                return ok(work_packages.create_relation(
+                    client,
+                    from_work_package_id=int(arguments["from_work_package_id"]),
+                    to_work_package_id=int(arguments["to_work_package_id"]),
+                    relation_type=arguments["relation_type"],
+                ))
+            case "update_relation":
+                return ok(work_packages.update_relation(
+                    client,
+                    relation_id=int(arguments["relation_id"]),
+                    description=arguments.get("description"),
+                    relation_type=arguments.get("relation_type"),
+                ))
+            case "delete_relation":
+                return ok(work_packages.delete_relation(client, int(arguments["relation_id"])))
             case "get_work_package_attachments":
                 return ok(work_packages.get_work_package_attachments(client, int(arguments["work_package_id"])))
             case "get_attachment_content":

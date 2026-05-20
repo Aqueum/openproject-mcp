@@ -49,6 +49,11 @@ class OpenProjectClient:
         response.raise_for_status()
         return response.json()
 
+    def delete(self, path: str) -> None:
+        url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
+        response = self.session.delete(url)
+        response.raise_for_status()
+
     def get_raw(self, path: str) -> requests.Response:
         """GET a non-JSON endpoint (e.g. attachment content), following redirects."""
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
