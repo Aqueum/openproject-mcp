@@ -1,6 +1,7 @@
 """MCP server — registers all OpenProject tools."""
 
 import json
+import os
 import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -20,9 +21,13 @@ def err(e: Exception) -> list[types.TextContent]:
     return [types.TextContent(type="text", text=f"Error: {e}")]
 
 
+def _delete_enabled() -> bool:
+    return os.getenv("OPENPROJECT_ALLOW_DELETE", "").lower() in ("true", "1", "yes")
+
+
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
-    return [
+    tools = [
         types.Tool(
             name="list_projects",
             description="List all accessible OpenProject projects.",
@@ -260,6 +265,25 @@ async def list_tools() -> list[types.Tool]:
             },
         ),
     ]
+    if _delete_enabled():
+        tools.append(types.Tool(
+            name="delete_work_package",
+            description=(
+                "PERMANENTLY delete a work package by ID. Irreversible — no "
+                "soft delete, no undo. Requires confirm=true at the call "
+                "site; the tool is only registered when "
+                "OPENPROJECT_ALLOW_DELETE=true in the MCP server environment."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer", "description": "Work package ID"},
+                    "confirm": {"type": "boolean", "description": "Must be true to proceed"},
+                },
+                "required": ["id", "confirm"],
+            },
+        ))
+    return tools
 
 
 @server.call_tool()
@@ -350,6 +374,17 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                     activity_id=int(arguments["activity_id"]) if arguments.get("activity_id") is not None else None,
                     comment=arguments.get("comment", ""),
                     user_id=int(arguments["user_id"]) if arguments.get("user_id") is not None else None,
+                ))
+            case "delete_work_package":
+                if not _delete_enabled():
+                    return err(RuntimeError(
+                        "delete_work_package is disabled. Set OPENPROJECT_ALLOW_DELETE=true "
+                        "in the MCP server environment to enable it."
+                    ))
+                return ok(work_packages.delete_work_package(
+                    client,
+                    id=int(arguments["id"]),
+                    confirm=bool(arguments.get("confirm", False)),
                 ))
             case "list_time_entries":
                 return ok(time_entries.list_time_entries(

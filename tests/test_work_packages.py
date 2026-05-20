@@ -12,6 +12,7 @@ from openproject_mcp.tools.work_packages import (
     create_relation,
     update_relation,
     delete_relation,
+    delete_work_package,
 )
 
 
@@ -177,6 +178,38 @@ class TestUpdateRelation:
         with pytest.raises(ValueError):
             update_relation(client, relation_id=42)
         client.patch.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# delete_work_package
+# ---------------------------------------------------------------------------
+
+class TestDeleteWorkPackage:
+    def test_raises_without_confirm(self):
+        import pytest
+        client = MagicMock()
+        with pytest.raises(ValueError):
+            delete_work_package(client, id=42)
+        client.delete.assert_not_called()
+
+    def test_raises_when_confirm_false(self):
+        import pytest
+        client = MagicMock()
+        with pytest.raises(ValueError):
+            delete_work_package(client, id=42, confirm=False)
+        client.delete.assert_not_called()
+
+    def test_calls_delete_when_confirm_true(self):
+        client = MagicMock()
+        client.delete.return_value = None
+        delete_work_package(client, id=42, confirm=True)
+        client.delete.assert_called_once_with("work_packages/42")
+
+    def test_returns_deletion_receipt(self):
+        client = MagicMock()
+        client.delete.return_value = None
+        result = delete_work_package(client, id=42, confirm=True)
+        assert result == {"deleted": True, "work_package_id": 42}
 
 
 # ---------------------------------------------------------------------------

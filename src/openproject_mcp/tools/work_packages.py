@@ -229,6 +229,24 @@ def update_work_package(
     return _format_wp(wp)
 
 
+def delete_work_package(
+    client: OpenProjectClient,
+    id: int,
+    confirm: bool = False,
+) -> dict:
+    """
+    PERMANENTLY delete a work package. Irreversible — no soft delete.
+
+    Requires confirm=True at the call site. The MCP tool itself is also
+    gated by the OPENPROJECT_ALLOW_DELETE env var on the server side
+    (see server.py); both belts must be undone before a delete fires.
+    """
+    if not confirm:
+        raise ValueError("delete_work_package requires confirm=True (irreversible)")
+    client.delete(f"work_packages/{id}")
+    return {"deleted": True, "work_package_id": id}
+
+
 def add_comment(client: OpenProjectClient, work_package_id: int, comment: str) -> dict:
     """Add a comment to a work package."""
     data = {"comment": {"format": "markdown", "raw": comment}}
