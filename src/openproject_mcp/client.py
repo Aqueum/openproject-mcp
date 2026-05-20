@@ -23,6 +23,11 @@ class OpenProjectClient:
         if not api_key:
             raise ValueError("OPENPROJECT_API_KEY is required")
 
+        self.timeout = (
+            float(os.getenv("OPENPROJECT_CONNECT_TIMEOUT", "10")),
+            float(os.getenv("OPENPROJECT_READ_TIMEOUT", "60")),
+        )
+
         token = base64.b64encode(f"apikey:{api_key}".encode()).decode()
         self.session = requests.Session()
         self.session.headers.update({
@@ -33,31 +38,31 @@ class OpenProjectClient:
 
     def get(self, path: str, params: dict | None = None) -> Any:
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
-        response = self.session.get(url, params=params)
+        response = self.session.get(url, params=params, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
 
     def post(self, path: str, data: dict) -> Any:
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
-        response = self.session.post(url, json=data)
+        response = self.session.post(url, json=data, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
 
     def patch(self, path: str, data: dict) -> Any:
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
-        response = self.session.patch(url, json=data)
+        response = self.session.patch(url, json=data, timeout=self.timeout)
         response.raise_for_status()
         return response.json()
 
     def delete(self, path: str) -> None:
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
-        response = self.session.delete(url)
+        response = self.session.delete(url, timeout=self.timeout)
         response.raise_for_status()
 
     def get_raw(self, path: str) -> requests.Response:
         """GET a non-JSON endpoint (e.g. attachment content), following redirects."""
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
-        response = self.session.get(url, headers={"Accept": "*/*"})
+        response = self.session.get(url, headers={"Accept": "*/*"}, timeout=self.timeout)
         response.raise_for_status()
         return response
 
