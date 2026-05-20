@@ -42,10 +42,17 @@ cp .env.example .env
 ### 3. Create venv and install dependencies
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-pip install -e src/
+bash scripts/setup-venv.sh
+```
+
+This auto-detects a Python 3.10+ base (Homebrew, python.org, or system) and rebuilds the venv with deps + the package installed in editable mode. Safe to re-run any time the venv breaks (e.g. after a macOS update or Homebrew Python upgrade removes the base interpreter the venv was built against).
+
+Manual equivalent if you'd rather:
+
+```bash
+/opt/homebrew/bin/python3.12 -m venv venv  # or any python3.10+
+venv/bin/python3 -m pip install -r requirements.txt
+venv/bin/python3 -m pip install -e src/
 ```
 
 ### 4. Test
@@ -63,7 +70,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "openproject": {
-      "command": "/path/to/openproject-mcp/venv/bin/python",
+      "command": "/path/to/openproject-mcp/venv/bin/python3",
       "args": ["-m", "openproject_mcp"],
       "env": {
         "OPENPROJECT_URL": "https://your-instance.ts.net",
