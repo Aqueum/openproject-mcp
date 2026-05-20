@@ -116,12 +116,11 @@ class TestCreateRelation:
 # ---------------------------------------------------------------------------
 
 class TestUpdateRelation:
-    def _current(self, lock: int = 4) -> dict:
+    def _patched(self) -> dict:
         return {
             "id": 42,
             "type": "blocks",
-            "description": "old",
-            "lockVersion": lock,
+            "description": "new note",
             "_links": {
                 "from": {"href": "/api/v3/work_packages/1", "title": "A"},
                 "to": {"href": "/api/v3/work_packages/2", "title": "B"},
@@ -130,45 +129,54 @@ class TestUpdateRelation:
 
     def test_patches_relations_path(self):
         client = MagicMock()
-        client.get.return_value = self._current()
-        client.patch.return_value = self._current()
+        client.patch.return_value = self._patched()
 
         update_relation(client, relation_id=42, description="new note")
 
         path = client.patch.call_args[0][0]
         assert path == "relations/42"
 
-    def test_includes_lock_version(self):
+    def test_no_get_called(self):
         client = MagicMock()
-        client.get.return_value = self._current(lock=11)
-        client.patch.return_value = self._current()
+        client.patch.return_value = self._patched()
 
         update_relation(client, relation_id=42, description="new note")
 
-        body = client.patch.call_args[0][1]
-        assert body["lockVersion"] == 11
+        client.get.assert_not_called()
 
     def test_description_sent_when_provided(self):
         client = MagicMock()
-        client.get.return_value = self._current()
-        client.patch.return_value = self._current()
+        client.patch.return_value = self._patched()
 
         update_relation(client, relation_id=42, description="new note")
 
         body = client.patch.call_args[0][1]
-        assert body["description"] == "new note"
-        assert "type" not in body
+        assert body == {"description": "new note"}
 
     def test_type_sent_when_provided(self):
         client = MagicMock()
-        client.get.return_value = self._current()
-        client.patch.return_value = self._current()
+        client.patch.return_value = self._patched()
 
         update_relation(client, relation_id=42, relation_type="follows")
 
         body = client.patch.call_args[0][1]
-        assert body["type"] == "follows"
-        assert "description" not in body
+        assert body == {"type": "follows"}
+
+    def test_both_fields_sent(self):
+        client = MagicMock()
+        client.patch.return_value = self._patched()
+
+        update_relation(client, relation_id=42, description="d", relation_type="follows")
+
+        body = client.patch.call_args[0][1]
+        assert body == {"description": "d", "type": "follows"}
+
+    def test_raises_when_no_fields_given(self):
+        import pytest
+        client = MagicMock()
+        with pytest.raises(ValueError):
+            update_relation(client, relation_id=42)
+        client.patch.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

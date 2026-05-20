@@ -293,13 +293,17 @@ def update_relation(
     Update a relation. Only provided fields are changed.
 
     - relation_type: see create_relation for the valid values
+
+    OpenProject relations are not lockVersion-protected, unlike work packages,
+    so PATCH goes directly without a prior GET.
     """
-    current = client.get(f"relations/{relation_id}")
-    data: dict[str, Any] = {"lockVersion": current["lockVersion"]}
+    data: dict[str, Any] = {}
     if description is not None:
         data["description"] = description
     if relation_type is not None:
         data["type"] = relation_type
+    if not data:
+        raise ValueError("provide description and/or relation_type")
     rel = client.patch(f"relations/{relation_id}", data)
     return _format_relation(rel)
 
