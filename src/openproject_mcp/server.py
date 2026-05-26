@@ -8,6 +8,7 @@ from mcp.server.stdio import stdio_server
 
 from openproject_mcp.client import OpenProjectClient
 from openproject_mcp.tools import projects, work_packages, users, meta, time_entries
+from openproject_mcp.http_transport import resolve_transport
 
 server = Server("openproject")
 client = OpenProjectClient()
@@ -399,5 +400,26 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
 
 async def main():
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    transport = resolve_transport()
+    if transport == "stdio":
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+    else:
+        # HTTP transport: build the app and hand off to uvicorn.
+        # uvicorn owns its own event loop; we should not be inside asyncio.run() here.
+        # __main__.py calls asyncio.run(main()), so we run uvicorn in the thread-pool
+        # manner that lets it create its own loop.
+        import uvicorn
+        from openproject_mcp.http_transport import build_http_app
+        port = int(os.getenv("MCP_PORT", "8091"))
+        app = build_http_app()
+        config = uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=port,
+            loop="asyncio",
+            timeout_keep_alive=30,
+            log_level="info",
+        )
+        uvicorn_server = uvicorn.Server(config)
+        await uvicorn_server.serve()

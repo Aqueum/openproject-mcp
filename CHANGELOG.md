@@ -1,6 +1,10 @@
 # Changelog
 
-Reverse-chronological log of shipped changes. Open backlog and parked items live in `TODO.md` (which doesn't exist yet — create on first parked item).
+Reverse-chronological log of shipped changes. Open backlog and parked items live in `TODO.md`.
+
+## 2026-05-26
+
+[x] **Add streamable-HTTP transport + Tailscale-identity/bearer auth + deploy artefacts** — task_001. Adds `MCP_TRANSPORT=http` mode so the server can run as a container on a NAS instead of only as a Claude Desktop subprocess. New `http_transport.py` module provides: `resolve_transport()` (returns stdio/http/raises ValueError), `AuthMiddleware` (standalone ASGI middleware enforcing Tailscale identity → allowlist → bearer checks with exact status codes from the spec), and `build_http_app()` factory (Starlette app with DNS-rebinding protection via `TransportSecuritySettings`, bounded `ThreadPoolExecutor`, `/healthz` bypass, and `StreamableHTTPSessionManager` lifecycle wired into Starlette lifespan). `OpenProjectClient` made thread-safe via `threading.local` per-thread sessions (fixes the shared module-level Session concurrency hazard). Deploy artefacts added: `Dockerfile`, `deploy/docker-compose.yml` (app + Tailscale sidecar, `compose_repo_backend` external network, healthcheck, log rotation), `deploy/.env.example`, `deploy/README.md`, `deploy/update-mcp.sh`, `deploy/tailscale-serve.json` (declarative sidecar serve config: HTTPS 443 → loopback). `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` gate DNS-rebinding and must include the node's MagicDNS host. NAS deployment section added to `README.md`. Built and verified via the `/vs` adversarial harness (independent spec-critic + Generator + Tester + Evaluator); the Evaluator caught a lifespan-wiring defect that passed all tests but would have crashed every live `/mcp` request, fixed before merge. 67 new tests (transport, auth matrix, concurrency, lifespan); stdio path and all 48 prior tests remain green. Live NAS bring-up is tracked in `TODO.md`.
 
 ## 2026-05-20
 

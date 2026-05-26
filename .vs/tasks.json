@@ -1,0 +1,11 @@
+[
+  {
+    "id": "task_001",
+    "description": "Add streamable-HTTP transport + Tailscale-identity/bearer auth + deploy artefacts to openproject-mcp; stdio stays default",
+    "implementation_status": "complete",
+    "test_status": "passing",
+    "assigned_to": "evaluator",
+    "mode": "rigorous",
+    "last_modified": "2026-05-26T06:00:00Z"
+  }
+]

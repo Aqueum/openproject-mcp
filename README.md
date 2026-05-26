@@ -83,6 +83,40 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 Restart Claude Desktop — the OpenProject tools will appear automatically.
 
+## NAS / container deployment (HTTP transport)
+
+If you want to run `openproject-mcp` as a persistent container on a NAS or
+server (rather than as a Claude Desktop subprocess on your Mac), use the HTTP
+transport mode with the Tailscale sidecar.
+
+```
+Claude Desktop / Claude Code (Mac)
+  └─ Tailscale ──→ tailscale sidecar container (injects identity header)
+                       └─ loopback ──→ openproject-mcp (HTTP, port 8091)
+                                          └─ HTTPS ──→ OpenProject
+```
+
+Set `MCP_TRANSPORT=http` to activate HTTP mode. The server then:
+
+- Listens on `127.0.0.1:${MCP_PORT:-8091}` (loopback — only reachable via the
+  Tailscale namespace).
+- Requires a `Tailscale-User-Login` identity header injected by `tailscale serve`.
+- Optionally checks a bearer token (`MCP_AUTH_TOKEN`) and an allowlist of
+  Tailscale logins (`MCP_ALLOWED_LOGINS`).
+- Exposes an unauthenticated `/healthz` for container health checks.
+
+See [`deploy/README.md`](deploy/README.md) for full setup instructions and
+[`deploy/.env.example`](deploy/.env.example) for all env vars.
+
+Quick start:
+
+```bash
+cd deploy
+cp .env.example .env       # fill in URL, API key, bearer token, Tailscale key
+docker compose up -d
+curl http://127.0.0.1:8091/healthz   # {"status": "ok"}
+```
+
 ## Available Tools
 
 | Tool | Description |

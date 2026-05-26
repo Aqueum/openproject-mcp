@@ -8,3 +8,16 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+.claude/settings.local.json
+
+# /vs harness: per-cycle artifacts are scratch; committed state is spec.md/tasks.json/progress.md
+.vs/cycle-*/
+
+# >>> vibe-managed runtime exclusions (auto-added; do not edit body) >>>
+# Files vibe writes to /workspace at runtime. Committing them
+# leaks per-machine state into the repo (PR-review-noise risk).
+# Opt out: set VIBE_AUTO_GITIGNORE=0 before container start, or
+# delete this entire block (won't be re-added once removed).
+.claude/settings.local.json
+.vibe/
+# <<< vibe-managed <<<

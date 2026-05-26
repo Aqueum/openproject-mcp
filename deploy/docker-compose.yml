@@ -1,0 +1,55 @@
+version: "3.9"
+
+networks:
+  compose_repo_backend:
+    external: true
+
+services:
+  tailscale:
+    image: tailscale/tailscale
+    hostname: openproject-mcp
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - ./tailscale-serve.json:/config/serve.json:ro
+    restart: unless-stopped
+    networks:
+      - compose_repo_backend
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    network_mode: "service:tailscale"
+    environment:
+      - OPENPROJECT_URL=${OPENPROJECT_URL}
+      - OPENPROJECT_API_KEY=${OPENPROJECT_API_KEY}
+      - MCP_AUTH_TOKEN=${MCP_AUTH_TOKEN}
+      - MCP_TRANSPORT=http
+      - MCP_PORT=${MCP_PORT:-8091}
+      - MCP_REQUIRE_BEARER=${MCP_REQUIRE_BEARER:-true}
+      - MCP_ALLOWED_LOGINS=${MCP_ALLOWED_LOGINS:-}
+      # MUST include the Tailscale MagicDNS hostname this node serves on, else the
+      # DNS-rebinding guard returns 421 for every real request. See .env.example.
+      - MCP_ALLOWED_HOSTS=${MCP_ALLOWED_HOSTS:-127.0.0.1,localhost}
+      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-http://127.0.0.1,http://localhost}
+    depends_on:
+      - tailscale
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${MCP_PORT:-8091}/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  tailscale-state:

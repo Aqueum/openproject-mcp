@@ -193,10 +193,14 @@ network-exposed server needs its own front door).
    `OPENPROJECT_HTTPS=true`). If it fails, switch `OPENPROJECT_URL` to the proxy
    path and re-test.
 5. `tailscale serve status` on the sidecar shows 443 → `127.0.0.1:8091`;
-   `mcp-op.<tailnet>.ts.net` resolves on the tailnet.
-6. **Client header spike:** confirm Desktop, Claude Code, and the iOS app can each
+   `openproject-mcp.<tailnet>.ts.net` resolves on the tailnet.
+6. **Set `MCP_ALLOWED_HOSTS`** to include `openproject-mcp.<tailnet>.ts.net`, then
+   confirm a request does NOT return 421. The DNS-rebinding default
+   (`127.0.0.1,localhost`) 421s real Tailscale traffic; this is the #1 first-boot
+   failure. Verify which Host `tailscale serve` actually forwards and trim the list.
+7. **Client header spike:** confirm Desktop, Claude Code, and the iOS app can each
    attach the bearer; set per-client `MCP_REQUIRE_BEARER` accordingly.
-7. Each client lists tools and runs a call over `https://mcp-op.<tailnet>.ts.net`.
+8. Each client lists tools and runs a call over `https://openproject-mcp.<tailnet>.ts.net`.
 
 ## Out of scope
 
@@ -219,8 +223,11 @@ untouched by any of the above. To remove the NAS deployment: `docker compose
 - `requirements.txt`: add `starlette`, `uvicorn`; bump/pin `mcp`.
 - `Dockerfile` (linux/amd64, wheels-only).
 - `deploy/docker-compose.yml` (sidecar + app), `deploy/.env.example`,
-  `deploy/README.md`.
-- `tests/test_transport.py` (+ auth/concurrency).
+  `deploy/README.md`, `deploy/tailscale-serve.json` (declarative serve config),
+  `deploy/update-mcp.sh` (one-shot rebuild/redeploy).
+- bounded `ThreadPoolExecutor` via `MCP_MAX_WORKERS`; `MCP_ALLOWED_HOSTS` /
+  `MCP_ALLOWED_ORIGINS` env knobs.
+- `tests/test_transport.py` (+ auth/concurrency) and `tests/test_http_lifespan.py`.
 - README NAS section; CHANGELOG entry.
 
 ## Critique resolution log (independent spec-critic)
@@ -251,3 +258,30 @@ untouched by any of the above. To remove the NAS deployment: `docker compose
   the same Starlette pattern).
 - **S3 (`delete_work_package` now network-reachable):** §6 `OPENPROJECT_ALLOW_DELETE`
   unset by default.
+
+## Post-implementation refinements (rev 3)
+
+Folded in after external review (Gemini) and the `/vs` build:
+
+- **Mobile-network resilience / bounded resources (Gemini #1).** Sync OpenProject
+  calls run on a bounded `ThreadPoolExecutor(max_workers=MCP_MAX_WORKERS`, default 8)
+  exposed at `app.state.executor`, so a pile-up of zombie SSE connections (iOS
+  backgrounding, silent TCP drops) cannot exhaust threads; uvicorn runs with a
+  finite keep-alive timeout and the session manager tears down state on the ASGI
+  `disconnect` event. Real-world silent-drop behaviour is a manual NAS observation;
+  stateless mode is the escape hatch if it ever bites.
+- **Update friction (Gemini #2).** `deploy/update-mcp.sh` wraps the rebuild/redeploy
+  into one command (no registry added — honours the repo's no-registry stance; for
+  the Synology, build on the Mac and `docker save | ssh … docker load`).
+- **`/vs` cycle-1 defect (Evaluator-caught).** The streamable-HTTP lifespan was
+  attached to an inner mounted app, so `session_manager.run()` never started and
+  every `/mcp` request would have raised "Task group is not initialized". 114 tests
+  passed regardless (the live handshake was scoped out). Fixed in cycle 2 (lifespan
+  on the outermost served app); locked by `tests/test_http_lifespan.py`.
+- **Pre-commit deploy fixes (not spec-covered, would break first boot).**
+  (1) Added `deploy/tailscale-serve.json` — the compose mounts it into the sidecar;
+  without it `tailscale serve` has no config and nothing reaches 443.
+  (2) Surfaced `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` in the compose + `.env.example`
+  with a prominent gotcha: the DNS-rebinding default (`127.0.0.1,localhost`) 421s
+  real Tailscale traffic, so the MagicDNS host must be added. (3) `.env.example`
+  now defaults `OPENPROJECT_URL` to the internal `http://web:8080`.

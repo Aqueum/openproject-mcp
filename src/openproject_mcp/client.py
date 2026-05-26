@@ -2,6 +2,7 @@
 
 import base64
 import os
+import threading
 from typing import Any
 from urllib.parse import urljoin
 
@@ -12,7 +13,13 @@ load_dotenv()
 
 
 class OpenProjectClient:
-    """Thin wrapper around the OpenProject REST API v3."""
+    """Thin wrapper around the OpenProject REST API v3.
+
+    Thread-safe: each call uses a thread-local Session so concurrent calls from a
+    ThreadPoolExecutor do not share state (cookies, redirect history, etc.).  The
+    Authorization / Content-Type headers are stored on the instance and applied to
+    every fresh session on demand.
+    """
 
     def __init__(self, base_url: str | None = None, api_key: str | None = None):
         self.base_url = (base_url or os.getenv("OPENPROJECT_URL", "")).rstrip("/")
@@ -29,12 +36,26 @@ class OpenProjectClient:
         )
 
         token = base64.b64encode(f"apikey:{api_key}".encode()).decode()
-        self.session = requests.Session()
-        self.session.headers.update({
+        self._default_headers = {
             "Authorization": f"Basic {token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
-        })
+        }
+        self._local = threading.local()
+
+    @property
+    def session(self) -> requests.Session:
+        """Return a per-thread Session, creating one on first access."""
+        if not hasattr(self._local, "session"):
+            s = requests.Session()
+            s.headers.update(self._default_headers)
+            self._local.session = s
+        return self._local.session
+
+    @session.setter
+    def session(self, value: requests.Session) -> None:
+        """Allow direct assignment (used by tests to inject a mock session)."""
+        self._local.session = value
 
     def get(self, path: str, params: dict | None = None) -> Any:
         url = urljoin(self.base_url + "/", f"api/v3/{path.lstrip('/')}")
